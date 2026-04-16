@@ -1,0 +1,37 @@
+{
+  "interroger_stock": {
+    "required": [
+      "reference"
+    ],
+    "optional": {
+      "warehouse": "*"
+    }
+  },
+  "article_plus_vendu": {
+    "required": [],
+    "optional": {
+      "startDate": "19000101",
+      "endDate": "99991231",
+      "customer": ""
+    }
+  },
+  "consulter_ventes": {
+    "required": [],
+    "optional": {
+      "startDate": "19000101",
+      "endDate": "99991231",
+      "customer": ""
+    }
+  },
+  "integrer_piece": {
+    "required": [
+      "pieceType",
+      "customerType",
+      "customer"
+    ],
+    "optional": {
+      "reference": "",
+      "quantite": 1
+    }
+  }
+}
