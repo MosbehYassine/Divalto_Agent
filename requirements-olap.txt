@@ -1,0 +1,2 @@
+# Optional: SSAS / Azure Analysis Services / Power BI (ADOMD.NET + pyadomd on Windows)
+pyadomd>=0.1.0

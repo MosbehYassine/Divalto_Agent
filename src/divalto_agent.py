@@ -18,6 +18,9 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 import requests
+
+from phase4_prefunctions import focus_terms_for_answer, normalize_text
+
 from settings import (
     AUTH_TIMEOUT_SECONDS,
     AUTH_TOKEN_TTL_SECONDS,
@@ -25,6 +28,8 @@ from settings import (
     CREDENTIALS,
     DOSSIER_CODE,
     HTTP_MAX_RETRIES,
+    SQLITE_MOCK_DB_PATH,
+    USE_SQLITE_MOCK,
     WS_TIMEOUT_SECONDS,
     WS_URL,
 )
@@ -156,6 +161,9 @@ def get_token_details(force_refresh: bool = False) -> dict:
     POSTs credentials to the auth endpoint.
     Returns a standardized result dict.
     """
+    if USE_SQLITE_MOCK:
+        return {"ok": True, "token": "sqlite-mock-token", "cached": True}
+
     now = time.time()
     cached_token = _TOKEN_CACHE.get("token")
     if cached_token and not force_refresh and now < _TOKEN_CACHE.get("expires_at", 0):
@@ -247,6 +255,24 @@ def call_webservice_details(token: str, validated_data: dict) -> dict:
     """
     action = validated_data.pop("action")   # pull action out of data
 
+    if USE_SQLITE_MOCK:
+        try:
+            from sqlite_backend import execute_action
+
+            data = execute_action(action, validated_data, SQLITE_MOCK_DB_PATH or None)
+            logger.info("[WS-SQLITE] Action '%s' executed on sqlite backend.", action)
+            return {"ok": True, "data": data}
+        except Exception as exc:
+            logger.error("[WS-SQLITE] backend execution failed: %s", exc)
+            return {
+                "ok": False,
+                "error": _build_error(
+                    "WS_SQLITE_BACKEND_ERROR",
+                    f"SQLite backend execution failed: {exc}",
+                    retryable=False,
+                ),
+            }
+
     ws_payload = {
         "action": {
             "swinfinity": action,
@@ -330,11 +356,122 @@ def call_webservice(token: str, validated_data: dict) -> Optional[dict]:
 # STEP 4 — FORMAT ERP RESPONSE → HUMAN ANSWER
 # ─────────────────────────────────────────────
 
-def format_response(action: str, erp_data: dict) -> str:
+def _score_row_match(row: dict[str, Any], terms: list[str], field_weights: dict[str, int]) -> int:
+    if not terms:
+        return 0
+    score = 0
+    for field, weight in field_weights.items():
+        val = normalize_text(str(row.get(field) or ""))
+        for term in terms:
+            if term and term in val:
+                score += weight
+    return score
+
+
+def _rank_rows_by_question(rows: list[dict[str, Any]], user_query: str, field_weights: dict[str, int]) -> list[tuple[int, dict[str, Any]]]:
+    terms = focus_terms_for_answer(user_query)
+    scored = [(_score_row_match(r, terms, field_weights), r) for r in rows]
+    scored.sort(key=lambda item: item[0], reverse=True)
+    return scored
+
+
+def _format_one_client_row(row: dict[str, Any]) -> str:
+    nom = row.get("nom") or "?"
+    cid = row.get("id", "?")
+    email = row.get("email") or "non renseigné"
+    ville = row.get("ville") or "non renseignée"
+    return (
+        f"Le client « {nom} » (identifiant {cid}) — e-mail : {email}, ville : {ville}."
+    )
+
+
+def _format_clients_answer(erp_data: dict, user_query: str) -> str:
+    clients = erp_data.get("clients") or []
+    if not isinstance(clients, list) or len(clients) == 0:
+        return "Aucun client ne correspond à cette recherche."
+
+    weights = {"nom": 5, "email": 2, "ville": 1}
+    ranked = _rank_rows_by_question(clients, user_query, weights)
+    terms = focus_terms_for_answer(user_query)
+    top_s, top_row = ranked[0]
+    second_s = ranked[1][0] if len(ranked) > 1 else -1
+
+    unique_best = len(clients) == 1 or (
+        top_s > 0 and (top_s >= second_s + 2 or (second_s <= 0 and top_s >= 3))
+    )
+    if unique_best:
+        return _format_one_client_row(top_row)
+
+    if not terms:
+        head = "\n".join(
+            f"• {_format_one_client_row(r)}" for _, r in ranked[: min(5, len(ranked))]
+        )
+        tail_note = ""
+        if len(clients) > 5:
+            tail_note = f"\n({len(clients)} résultats au total — précisez un nom ou un code client.)"
+        return "Voici les premiers clients correspondant à la recherche :\n" + head + tail_note
+
+    lines = [_format_one_client_row(r) for _, r in ranked[:3]]
+    body = "\n".join(f"• {line}" for line in lines)
+    more = len(ranked) - 3
+    suffix = f"\n({more} autre(s) correspondance(s) — précisez le nom ou le code client.)" if more > 0 else ""
+    return (
+        "Plusieurs clients correspondent partiellement à votre question ; les plus probables sont :\n"
+        + body
+        + suffix
+    )
+
+
+def _format_one_article_row(row: dict[str, Any]) -> str:
+    ref = row.get("reference") or "?"
+    aid = row.get("id", "?")
+    prix = row.get("prix_unitaire")
+    prix_txt = f"{prix} €" if prix is not None else "prix non renseigné"
+    return f"L'article « {ref} » (identifiant {aid}) est au prix unitaire de {prix_txt}."
+
+
+def _format_articles_answer(erp_data: dict, user_query: str) -> str:
+    articles = erp_data.get("articles") or []
+    if not isinstance(articles, list) or len(articles) == 0:
+        return "Aucun article ne correspond à cette recherche."
+
+    weights = {"reference": 6}
+    ranked = _rank_rows_by_question(articles, user_query, weights)
+    terms = focus_terms_for_answer(user_query)
+    top_s, top_row = ranked[0]
+    second_s = ranked[1][0] if len(ranked) > 1 else -1
+
+    unique_best = len(articles) == 1 or (
+        top_s > 0 and (top_s >= second_s + 2 or (second_s <= 0 and top_s >= 3))
+    )
+    if unique_best:
+        return _format_one_article_row(top_row)
+
+    if not terms:
+        head = "\n".join(f"• {_format_one_article_row(r)}" for _, r in ranked[: min(5, len(ranked))])
+        tail = ""
+        if len(articles) > 5:
+            tail = f"\n({len(articles)} résultats au total — précisez la désignation ou la référence.)"
+        return "Voici les premiers articles trouvés :\n" + head + tail
+
+    lines = [_format_one_article_row(r) for _, r in ranked[:3]]
+    body = "\n".join(f"• {line}" for line in lines)
+    more = len(ranked) - 3
+    suffix = f"\n({more} autre(s) ligne(s) — précisez la référence.)" if more > 0 else ""
+    return (
+        "Plusieurs articles correspondent à votre recherche ; les plus pertinents semblent être :\n"
+        + body
+        + suffix
+    )
+
+
+def format_response(action: str, erp_data: dict, user_query: str = "") -> str:
     """
     Converts the raw ERP JSON response into a readable business answer.
     Add a new elif block for each new webservice you onboard.
     """
+
+    user_question = user_query or ""
 
     if action == "interroger_stock":
         reference = erp_data.get("reference", "?")
@@ -357,9 +494,92 @@ def format_response(action: str, erp_data: dict) -> str:
             msg += f" CA généré : {ca}."
         return msg
 
+    elif action == "classement_ventes":
+        items = erp_data.get("items") or []
+        if not isinstance(items, list) or len(items) == 0:
+            return "Classement des ventes : aucun mouvement sur la période."
+        top = items[0]
+        ref = top.get("reference", "?")
+        qty = top.get("quantite", "?")
+        ca = top.get("ca")
+        order = str(erp_data.get("order") or "desc").lower()
+        suffix = ""
+        if len(items) > 1:
+            suffix = f" Le classement compte {len(items)} ligne(s)."
+        if order == "asc":
+            msg = (
+                f"L'article le moins vendu est '{ref}' ({qty} unité(s))."
+                + (f" CA : {ca}." if ca is not None else "")
+                + suffix
+            )
+        else:
+            msg = (
+                f"En tête des ventes : '{ref}' ({qty} unité(s))."
+                + (f" CA : {ca}." if ca is not None else "")
+                + suffix
+            )
+        return msg
+
     elif action == "integrer_piece":
         piece_id = erp_data.get("pieceId", erp_data.get("id", "?"))
         return f"La pièce a été créée avec succès (ID : {piece_id})."
+
+    elif action == "consulter_ventes":
+        total = erp_data.get("totalVentes", 0)
+        return f"Le total des ventes sur la période est de {total} €."
+
+    elif action == "consulter_facturation":
+        nb = erp_data.get("nbFactures", 0)
+        montant = erp_data.get("montantTotal", 0)
+        return f"Facturation: {nb} facture(s), montant total {montant} €."
+
+    elif action == "consulter_stocks":
+        items = erp_data.get("stocks") or []
+        if not isinstance(items, list) or len(items) == 0:
+            return "Aucun stock trouvé pour ce filtre."
+        terms = focus_terms_for_answer(user_question)
+        ranked = _rank_rows_by_question(items, user_question, {"reference": 4})
+        pick = items[0]
+        if len(items) > 1 and terms and ranked[0][0] > 0:
+            pick = ranked[0][1]
+        ref = pick.get("reference", "?")
+        qty = pick.get("quantity", pick.get("quantite", "?"))
+        order = str(erp_data.get("order") or "asc").lower()
+        if len(items) == 1:
+            return f"Pour « {ref} », le stock disponible est de {qty} unité(s)."
+        if len(items) > 1 and terms and ranked[0][0] > 0:
+            return (
+                f"Pour votre recherche, la ligne la plus pertinente est « {ref} » "
+                f"avec {qty} unité(s). ({len(items)} article(s) dans la liste filtrée.)"
+            )
+        if order == "desc":
+            return f"L'article avec le stock le plus élevé est « {ref} » avec {qty} unité(s)."
+        return f"L'article avec le stock le plus faible est « {ref} » avec {qty} unité(s)."
+
+    elif action == "consulter_clients":
+        if str(erp_data.get("aggregate") or "").lower() == "count":
+            n = erp_data.get("totalClients")
+            if n is None:
+                n = erp_data.get("count", 0)
+            return f"Il y a {n} client(s) correspondant aux critères demandés."
+        return _format_clients_answer(erp_data, user_question)
+
+    elif action == "consulter_articles":
+        return _format_articles_answer(erp_data, user_question)
+
+    elif action == "consulter_indicateurs_analytiques":
+        series = erp_data.get("series") or []
+        if not isinstance(series, list) or len(series) == 0:
+            return "Aucune donnée analytique sur la période demandée."
+        metric = erp_data.get("metric", "?")
+        group_by = erp_data.get("groupBy", "?")
+        total = sum(float(p.get("value") or 0.0) for p in series)
+        preview = ", ".join(f"{p.get('bucket')} -> {p.get('value')}" for p in series[:8])
+        ellipsis = " …" if len(series) > 8 else ""
+        return (
+            f"Indicateur « {metric} » ({group_by}) sur {len(series)} période(s), "
+            f"cumul environ {total:.2f}. Détail : {preview}{ellipsis}"
+        )
 
     else:
         # Fallback: dump the raw response
@@ -448,7 +668,7 @@ def run_agent_structured(llm_json: dict) -> dict:
     erp_response = ws_result["data"]
     logger.info("[ERP Response] %s", erp_response)
 
-    answer = format_response(action, erp_response)
+    answer = format_response(action, erp_response, user_query="")
     logger.info("[Answer] %s", answer)
     return {"ok": True, "answer": answer, "raw": erp_response}
 

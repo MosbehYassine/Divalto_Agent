@@ -1,0 +1,86 @@
+{
+  "actions": {
+    "interroger_stock": {
+      "tool_name": "stocks",
+      "domain": "inventory",
+      "intent_terms": ["stock", "disponible", "disponibilite", "depot", "entrepot", "warehouse"],
+      "measure_terms": ["quantite", "quantity", "volume"]
+    },
+    "consulter_stocks": {
+      "tool_name": "stocks",
+      "domain": "inventory",
+      "intent_terms": ["stock", "disponible", "disponibilite", "depot", "entrepot", "warehouse"],
+      "measure_terms": ["quantite", "quantity", "volume"]
+    },
+    "article_plus_vendu": {
+      "tool_name": "article_plus_vendu",
+      "domain": "sales",
+      "intent_terms": ["top", "plus vendu", "best seller", "meilleur produit"],
+      "measure_terms": ["ventes", "ca", "chiffre d'affaires", "revenu", "amount"]
+    },
+    "classement_ventes": {
+      "tool_name": "classement_des_ventes",
+      "domain": "sales",
+      "intent_terms": ["top", "classement", "rang", "best", "plus vendu"],
+      "measure_terms": ["ventes", "ca", "chiffre d'affaires", "revenu", "amount"]
+    },
+    "consulter_ventes": {
+      "tool_name": "consultation_ventes",
+      "domain": "sales",
+      "intent_terms": ["vente", "ventes", "chiffre", "ca", "revenu", "compare", "evolution"],
+      "measure_terms": ["ventes", "ca", "chiffre d'affaires", "revenu", "amount"]
+    },
+    "consulter_facturation": {
+      "tool_name": "facturation",
+      "domain": "finance",
+      "intent_terms": ["facture", "facturation", "invoice", "encaissement"],
+      "measure_terms": ["montant", "amount", "total", "nb factures"]
+    },
+    "consulter_articles": {
+      "tool_name": "articles",
+      "domain": "catalog",
+      "intent_terms": ["article", "catalogue", "famille", "reference"],
+      "measure_terms": []
+    },
+    "consulter_clients": {
+      "tool_name": "clients",
+      "domain": "crm",
+      "intent_terms": ["client", "clients", "segment", "region"],
+      "measure_terms": ["nombre", "count"]
+    },
+    "consulter_indicateurs_analytiques": {
+      "tool_name": "indicateurs_analytiques",
+      "domain": "analytics",
+      "intent_terms": ["indicateur", "kpi", "analytique", "tendance", "serie", "mensuel"],
+      "measure_terms": ["sales", "quantity", "amount", "margin", "stock"]
+    },
+    "integrer_piece": {
+      "tool_name": "integration_piece",
+      "domain": "operations",
+      "intent_terms": ["integrer", "creer piece", "document", "bon", "commande"],
+      "measure_terms": []
+    }
+  },
+  "measure_preferences": [
+    {
+      "measure": "sales",
+      "terms": ["vente", "ventes", "ca", "chiffre d'affaires", "revenu"],
+      "preferred_actions": ["consulter_ventes", "classement_ventes", "consulter_indicateurs_analytiques"]
+    },
+    {
+      "measure": "billing",
+      "terms": ["facture", "facturation", "invoice", "montant facture"],
+      "preferred_actions": ["consulter_facturation", "consulter_indicateurs_analytiques"]
+    },
+    {
+      "measure": "stock",
+      "terms": ["stock", "disponible", "disponibilite", "inventaire"],
+      "preferred_actions": ["consulter_stocks", "interroger_stock", "consulter_indicateurs_analytiques"]
+    },
+    {
+      "measure": "quantity",
+      "terms": ["quantite", "volume", "units"],
+      "preferred_actions": ["consulter_indicateurs_analytiques", "classement_ventes", "consulter_stocks"]
+    }
+  ]
+}

@@ -16,8 +16,33 @@ Usage:
 """
 
 import json
-from phase3_planner      import plan
+
+from governance.context import build_optional_context_from_env
+from governance.execution_context import AgentExecutionContext
+from governance.models import ExecutionApproval
+from governance.pipeline import finalize_agent_audit
+from intent_contract import infer_intent
+
+from analytic_catalog import load_or_build_semantic_bundle
+from analytic_orchestrator import run_semantic_data_analytics
 from phase3_orchestrator import execute_plan
+from phase3_planner import plan
+from semantic_routing import classic_semantic_analytics_eligible
+
+
+# ─────────────────────────────────────────────
+# PRECHECKS
+# ─────────────────────────────────────────────
+
+def _requires_reference_clarification(execution_plan: list[dict]) -> bool:
+    """True when a stock lookup is planned without a usable article reference."""
+    for step in execution_plan:
+        if step.get("action") != "interroger_stock":
+            continue
+        reference = str(step.get("reference", "")).strip()
+        if not reference or reference.upper() == "UNKNOWN_REFERENCE":
+            return True
+    return False
 
 
 # ─────────────────────────────────────────────
@@ -48,6 +73,18 @@ def aggregate(execution_result: dict) -> dict:
     # Two steps where step 0 found a top article and
     # step 1 checked its stock → "top + stock" combo
     actions = [s["action"] for s in steps]
+
+    # If ranking is present, prioritize rendering ranking as a single business answer.
+    # Some planners may append extra helper calls; ranking remains the user-facing intent.
+    if "classement_ventes" in actions:
+        ranking_step = next((s for s in reversed(steps) if s.get("action") == "classement_ventes"), None)
+        if ranking_step is not None:
+            return {
+                "type": "single",
+                "action": "classement_ventes",
+                "raw": ranking_step.get("raw", {}),
+            }
+
     if ("article_plus_vendu" in actions and
             "interroger_stock" in actions):
         top_data   = steps[0]["raw"]
@@ -98,7 +135,7 @@ def aggregate(execution_result: dict) -> dict:
 # FINAL FORMATTER
 # ─────────────────────────────────────────────
 
-def format_final(aggregated: dict) -> str:
+def format_final(aggregated: dict, user_query: str = "") -> str:
     """
     Convert the aggregated dict into a natural French sentence.
     """
@@ -110,7 +147,8 @@ def format_final(aggregated: dict) -> str:
     if t == "single":
         # Delegate to Phase 2 format_response for single-step answers
         from divalto_agent import format_response
-        return format_response(aggregated["action"], aggregated["raw"])
+
+        return format_response(aggregated["action"], aggregated["raw"], user_query=user_query or "")
 
     if t == "top_plus_stock":
         art   = aggregated["article"]
@@ -156,9 +194,15 @@ def format_final(aggregated: dict) -> str:
 # MAIN ENTRY POINT
 # ─────────────────────────────────────────────
 
-def run_phase3(user_query: str,
-               use_mock_planner: bool = True,
-               mock_responses:   dict = None) -> str:
+def run_phase3(
+    user_query: str,
+    use_mock_planner: bool = True,
+    mock_responses: dict | None = None,
+    *,
+    correlation_id: str | None = None,
+    approval: ExecutionApproval | None = None,
+    execution_context: AgentExecutionContext | None = None,
+) -> str:
     """
     Full Phase 3 pipeline:
         user_query
@@ -171,8 +215,8 @@ def run_phase3(user_query: str,
     Args:
         user_query        : natural language question
         use_mock_planner  : True = rule-based planner (no LLM needed)
-        mock_responses    : dict of step_N → fake ERP JSON
-                            (None = call real Divalto endpoint)
+        mock_responses    : dict of step_N → fake ERP JSON (None → real endpoint)
+        correlation_id / approval / execution_context : optional Phase‑6 telemetry controls
 
     Returns:
         str — the final business answer
@@ -182,20 +226,85 @@ def run_phase3(user_query: str,
     print(f"Query: {user_query}")
     print('='*55)
 
+    exec_ctx = execution_context or build_optional_context_from_env(
+        user_query=user_query,
+        correlation_id=correlation_id,
+        approval=approval,
+    )
+
     # Step 1 — Plan
     execution_plan = plan(user_query, use_mock=use_mock_planner)
+    if _requires_reference_clarification(execution_plan):
+        decision = infer_intent(user_query)
+        answer = (
+            decision.clarification_message
+            if decision.requires_clarification and decision.clarification_message
+            else (
+                "J'ai besoin de la reference article pour verifier le stock. "
+                "Pouvez-vous me donner le code produit (ex: ALB0001) ?"
+            )
+        )
+        finalize_agent_audit(
+            exec_ctx,
+            plan=execution_plan,
+            execution_result={"ok": False, "steps": [], "errors": [{"type": "MISSING_REFERENCE"}]},
+            final_answer=answer,
+        )
+        print(f"\n[Final Answer] {answer}")
+        return answer
 
     # Step 2 — Execute
-    result = execute_plan(execution_plan, mock_responses=mock_responses)
+    result = execute_plan(execution_plan, mock_responses=mock_responses, execution_context=exec_ctx)
+
+    governance = result.get("governance") or {}
+    if governance.get("plan_blocked"):
+        answer = (
+            "La demande a été bloquée par la politique de sécurité (périmètre non autorisé). "
+            f"Détails : {governance.get('message', '')}"
+        )
+        finalize_agent_audit(
+            exec_ctx,
+            plan=execution_plan,
+            execution_result=result,
+            final_answer=answer,
+        )
+        print(f"\n[Final Answer] {answer}")
+        return answer
 
     if not result["ok"] and not result["steps"]:
-        return f"Erreur d'exécution : {result.get('error')}"
+        fallback = result.get("error") or result.get("errors")
+        answer = f"Erreur d'exécution : {fallback}"
+        finalize_agent_audit(
+            exec_ctx,
+            plan=execution_plan,
+            execution_result=result,
+            final_answer=answer,
+        )
+        print(f"\n[Final Answer] {answer}")
+        return answer
 
     # Step 3 — Aggregate
     aggregated = aggregate(result)
 
     # Step 4 — Format
-    answer = format_final(aggregated)
+    answer = format_final(aggregated, user_query=user_query)
+
+    if not use_mock_planner and classic_semantic_analytics_eligible(user_query):
+        bundle, _, _ = load_or_build_semantic_bundle()
+        if bundle:
+            try:
+                sa = run_semantic_data_analytics(user_query)
+                if sa.get("ok") and sa.get("answer"):
+                    answer = f"{answer.rstrip()}\n\n---\n\n{sa['answer'].strip()}"
+            except Exception as exc:  # noqa: BLE001
+                answer = f"{answer.rstrip()}\n\n---\n\n_Analytique cataloguée : {exc}_"
+
+    finalize_agent_audit(
+        exec_ctx,
+        plan=execution_plan,
+        execution_result=result,
+        final_answer=answer,
+    )
 
     print(f"\n[Final Answer] {answer}")
     return answer

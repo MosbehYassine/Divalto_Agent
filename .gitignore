@@ -9,3 +9,7 @@ venv/
 .eggs/
 dist/
 build/
+node_modules/
+frontend/dist/
+docs/
+generated_olap/

@@ -1,1 +1,5 @@
 langgraph
+fastapi
+uvicorn
+
+# OLAP / remote MDX (Windows + ADOMD.NET): pip install -r requirements-olap.txt

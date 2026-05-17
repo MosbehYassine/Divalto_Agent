@@ -198,28 +198,27 @@ run_test(
 print(f"\n{'-'*60}")
 print("UNIT TESTS — validate_payload() only")
 
-def test_validate(name, llm_json, expect_ok):
+def demo_validate_payload(name: str, llm_json: dict, expect_ok: bool) -> None:
+    """Manual script demo only — not a pytest entrypoint (avoid ``test_*`` prefix)."""
     result = validate_payload(llm_json)
     status = "PASS" if result["ok"] == expect_ok else "FAIL"
     print(f"  [{status}] {name} -> ok={result['ok']}")
     if not result["ok"]:
         print(f"         -> {result.get('message') or result.get('error')}")
 
-test_validate("reference present -> ok",
-    {"action": "interroger_stock", "reference": "X"}, True)
+demo_validate_payload("reference present -> ok", {"action": "interroger_stock", "reference": "X"}, True)
 
-test_validate("reference missing -> not ok",
-    {"action": "interroger_stock"}, False)
+demo_validate_payload("reference missing -> not ok", {"action": "interroger_stock"}, False)
 
-test_validate("all optional -> ok (article_plus_vendu)",
-    {"action": "article_plus_vendu"}, True)
+demo_validate_payload("all optional -> ok (article_plus_vendu)", {"action": "article_plus_vendu"}, True)
 
-test_validate("all required -> ok (integrer_piece)",
-    {"action": "integrer_piece", "pieceType": "FA",
-     "customerType": "CLI", "customer": "C1"}, True)
+demo_validate_payload(
+    "all required -> ok (integrer_piece)",
+    {"action": "integrer_piece", "pieceType": "FA", "customerType": "CLI", "customer": "C1"},
+    True,
+)
 
-test_validate("two required missing -> not ok",
-    {"action": "integrer_piece", "pieceType": "FA"}, False)
+demo_validate_payload("two required missing -> not ok", {"action": "integrer_piece", "pieceType": "FA"}, False)
 
 
 print(f"\n{'='*60}")
