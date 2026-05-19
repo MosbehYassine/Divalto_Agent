@@ -1,5 +1,17 @@
-* {
+@import './themes.css';
+
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html,
@@ -8,5 +20,33 @@ body,
   margin: 0;
   width: 100%;
   min-height: 100%;
-  font-family: Inter, Segoe UI, Roboto, sans-serif;
+  background: var(--bg-app);
+  color: var(--text-primary);
+}
+
+body {
+  line-height: 1.65;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

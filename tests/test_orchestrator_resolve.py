@@ -6,7 +6,7 @@ _SRC_DIR = os.path.abspath(os.path.join(_TESTS_DIR, "..", "src"))
 if _SRC_DIR not in sys.path:
     sys.path.insert(0, _SRC_DIR)
 
-from phase3_orchestrator import execute_plan, resolve_references  # noqa: E402
+from phase3.orchestrator import execute_plan, resolve_references  # noqa: E402
 
 
 def test_resolve_leader_reference():

@@ -24,6 +24,20 @@
       "intent_terms": ["top", "classement", "rang", "best", "plus vendu"],
       "measure_terms": ["ventes", "ca", "chiffre d'affaires", "revenu", "amount"]
     },
+    "classement_clients": {
+      "tool_name": "classement_clients",
+      "domain": "crm",
+      "intent_terms": [
+        "meilleur client",
+        "top client",
+        "client qui achete",
+        "client qui achète",
+        "plus d achat",
+        "volume d achat",
+        "classement client"
+      ],
+      "measure_terms": ["ca", "chiffre d'affaires", "quantite", "volume", "achat"]
+    },
     "consulter_ventes": {
       "tool_name": "consultation_ventes",
       "domain": "sales",

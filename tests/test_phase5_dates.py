@@ -10,7 +10,7 @@ if _SRC_DIR not in sys.path:
 import phase5_dates  # noqa: E402
 import pytest  # noqa: E402
 
-from phase5_dates import (  # noqa: E402
+from phase5.dates import (  # noqa: E402
     describe_window_fr,
     infer_date_bounds_from_question,
     paired_prior_window,

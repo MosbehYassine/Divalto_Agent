@@ -1,0 +1,134 @@
+{
+  "source": "d:\\PFE_final\\mock database\\magasin_mock.db",
+  "tables": [
+    {
+      "table": "clients",
+      "domain": "crm",
+      "dimensions": [
+        {
+          "name": "id",
+          "kind": "identifier"
+        },
+        {
+          "name": "nom",
+          "kind": "attribute"
+        },
+        {
+          "name": "email",
+          "kind": "attribute"
+        },
+        {
+          "name": "ville",
+          "kind": "attribute"
+        }
+      ],
+      "measures": [],
+      "hierarchies": []
+    },
+    {
+      "table": "articles",
+      "domain": "generic",
+      "dimensions": [
+        {
+          "name": "id",
+          "kind": "identifier"
+        },
+        {
+          "name": "designation",
+          "kind": "attribute"
+        }
+      ],
+      "measures": [
+        {
+          "name": "prix_unitaire",
+          "aggregation": "avg",
+          "data_type": "REAL"
+        }
+      ],
+      "hierarchies": []
+    },
+    {
+      "table": "stocks",
+      "domain": "inventory",
+      "dimensions": [],
+      "measures": [
+        {
+          "name": "id_article",
+          "aggregation": "sum",
+          "data_type": "INTEGER"
+        },
+        {
+          "name": "quantite",
+          "aggregation": "sum",
+          "data_type": "INTEGER"
+        }
+      ],
+      "hierarchies": []
+    },
+    {
+      "table": "factures",
+      "domain": "finance",
+      "dimensions": [
+        {
+          "name": "id",
+          "kind": "identifier"
+        },
+        {
+          "name": "date_facture",
+          "kind": "date"
+        }
+      ],
+      "measures": [
+        {
+          "name": "id_client",
+          "aggregation": "sum",
+          "data_type": "INTEGER"
+        }
+      ],
+      "hierarchies": [
+        {
+          "name": "date_facture_hierarchy",
+          "levels": [
+            "Year",
+            "Quarter",
+            "Month",
+            "Day"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "ventes",
+      "domain": "sales",
+      "dimensions": [
+        {
+          "name": "id",
+          "kind": "identifier"
+        }
+      ],
+      "measures": [
+        {
+          "name": "id_facture",
+          "aggregation": "sum",
+          "data_type": "INTEGER"
+        },
+        {
+          "name": "id_article",
+          "aggregation": "sum",
+          "data_type": "INTEGER"
+        },
+        {
+          "name": "quantite",
+          "aggregation": "sum",
+          "data_type": "INTEGER"
+        },
+        {
+          "name": "prix_vente_unitaire",
+          "aggregation": "avg",
+          "data_type": "REAL"
+        }
+      ],
+      "hierarchies": []
+    }
+  ]
+}

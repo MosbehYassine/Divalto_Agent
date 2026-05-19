@@ -68,7 +68,7 @@ def build_optional_context_from_env(
 
     Imported lazily to keep ``settings.py`` free of circular imports toward governance.
     """
-    import settings as app_settings  # defer import
+    import core.settings as app_settings  # defer import
 
     return build_execution_context(
         user_query=user_query,

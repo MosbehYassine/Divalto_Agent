@@ -1,12 +1,17 @@
-import { useMemo, useState } from 'react'
-import { MessageContent } from './components/MessageContent'
+import { useEffect, useRef, useState } from 'react'
+import { AssistantMessageToolbar } from './components/AssistantMessageToolbar'
+import { getFirstChartContainerId, MessageContent } from './components/MessageContent'
+import { PreferencesBar } from './components/PreferencesBar'
+import { Sidebar } from './components/Sidebar'
+import { usePersistedApp } from './hooks/usePersistedApp'
+import { formatMessageTime } from './utils/formatTime'
+import { detectFormatFromQuery, resolveDisplayMode } from './utils/outputFormat'
 import './App.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
-// Align with backend Ollama: DIVALTO_OLLAMA_TIMEOUT_SECONDS * (DIVALTO_OLLAMA_RETRIES + 1) + margin for ERP/mock steps.
 const CHAT_TIMEOUT_REAL_MS = Number(import.meta.env.VITE_CHAT_TIMEOUT_REAL_MS) || 150000
-// Mock planner skips backend Ollama for classic/phase5; keep headroom for slow SQLite / network.
 const CHAT_TIMEOUT_MOCK_MS = Number(import.meta.env.VITE_CHAT_TIMEOUT_MOCK_MS) || 90000
+const MODE = 'auto'
 
 function buildAssistantReply(payload) {
   if (!payload) return 'No response payload received.'
@@ -16,25 +21,41 @@ function buildAssistantReply(payload) {
 }
 
 function App() {
-  const [messages, setMessages] = useState([
-    {
-      id: crypto.randomUUID(),
-      role: 'assistant',
-      content:
-        'Welcome. Ask me anything about sales, stock, billing, clients, or analytics. I will route through your Divalto pipeline.',
-      createdAt: new Date().toISOString(),
-    },
-  ])
+  const {
+    preferences,
+    setPreference,
+    conversations,
+    activeConversation,
+    selectConversation,
+    newConversation,
+    deleteConversation,
+    clearAllHistory,
+    appendMessages,
+    setMessageFeedback,
+  } = usePersistedApp()
+
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const mode = 'auto'
   const [resolvedMode, setResolvedMode] = useState('auto')
-  const [useRealPlanner, setUseRealPlanner] = useState(true)
   const [error, setError] = useState('')
   const [plannerReady, setPlannerReady] = useState(true)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const messagesEndRef = useRef(null)
 
+  const useRealPlanner = preferences.useRealPlanner
+  const messages = activeConversation?.messages ?? []
   const canSend = input.trim().length > 0 && !loading
-  const sortedMessages = useMemo(() => messages.slice(), [messages])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, loading])
+
+  function handlePreferenceChange(key, value) {
+    if (key === 'useRealPlanner' && value === false) {
+      setPlannerReady(false)
+    }
+    setPreference(key, value)
+  }
 
   async function warmupPlannerIfNeeded() {
     if (!useRealPlanner || plannerReady) return
@@ -57,16 +78,12 @@ function App() {
   async function sendMessage() {
     if (!canSend) return
     const text = input.trim()
-    const userMsg = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: text,
-      createdAt: new Date().toISOString(),
-    }
-    setMessages((prev) => [...prev, userMsg])
     setInput('')
     setLoading(true)
     setError('')
+
+    const queryFormatHint = detectFormatFromQuery(text)
+    appendMessages([{ role: 'user', content: text }])
 
     try {
       await warmupPlannerIfNeeded()
@@ -79,7 +96,7 @@ function App() {
         signal: controller.signal,
         body: JSON.stringify({
           query: text,
-          mode,
+          mode: MODE,
           real_planner: useRealPlanner,
         }),
       }).finally(() => clearTimeout(timeoutId))
@@ -89,30 +106,24 @@ function App() {
         throw new Error(payload?.detail || payload?.error || 'Request failed')
       }
       setResolvedMode(typeof payload?.mode === 'string' ? payload.mode : 'auto')
-
-      const assistantMsg = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: buildAssistantReply(payload),
-        createdAt: new Date().toISOString(),
-      }
-      setMessages((prev) => [...prev, assistantMsg])
+      appendMessages([
+        {
+          role: 'assistant',
+          content: buildAssistantReply(payload),
+          mode: typeof payload?.mode === 'string' ? payload.mode : resolvedMode,
+          displayFormat: resolveDisplayMode(preferences.displayFormat, queryFormatHint),
+        },
+      ])
     } catch (err) {
       const message =
         err instanceof Error && err.name === 'AbortError'
-          ? `Request timed out after ${Math.round((useRealPlanner ? CHAT_TIMEOUT_REAL_MS : CHAT_TIMEOUT_MOCK_MS) / 1000)} seconds.`
+          ? `Délai dépassé (${Math.round((useRealPlanner ? CHAT_TIMEOUT_REAL_MS : CHAT_TIMEOUT_MOCK_MS) / 1000)} s).`
           : err instanceof Error
             ? err.message
-            : 'Unknown error'
+            : 'Erreur inconnue'
       setError(message)
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          content: `I could not complete the request: ${message}`,
-          createdAt: new Date().toISOString(),
-        },
+      appendMessages([
+        { role: 'assistant', content: `Je n'ai pas pu terminer la requête : ${message}` },
       ])
     } finally {
       setLoading(false)
@@ -124,79 +135,150 @@ function App() {
     void sendMessage()
   }
 
+  function onComposerKeyDown(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      void sendMessage()
+    }
+  }
+
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <div className="brand-dot" />
-          <div>
-            <h1>Divalto AI</h1>
-            <p>Professional assistant workspace</p>
-          </div>
-        </div>
-        <div className="controls">
-          <label>
-            Mode
-            <input value="auto (inferred from question)" disabled readOnly />
-          </label>
-          <label className="toggle">
-            <input
-              type="checkbox"
-              checked={useRealPlanner}
-              onChange={(e) => {
-                const enabled = e.target.checked
-                setUseRealPlanner(enabled)
-                if (!enabled) {
-                  setPlannerReady(false)
-                }
-              }}
-            />
-            <span>Use real planner (Ollama)</span>
-          </label>
-        </div>
-        <div className="status-card">
-          <p>API</p>
-          <code>{API_BASE_URL}</code>
-          <p style={{ marginTop: 8 }}>
-            Planner: {useRealPlanner ? (plannerReady ? 'real (warmed)' : 'real (warmup pending)') : 'mock'}
-          </p>
-        </div>
-      </aside>
+      <Sidebar
+        apiBaseUrl={API_BASE_URL}
+        conversations={conversations}
+        activeConversationId={activeConversation.id}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
+        onSelectConversation={selectConversation}
+        onNewConversation={newConversation}
+        onDeleteConversation={deleteConversation}
+        onClearHistory={() => {
+          if (window.confirm('Supprimer toutes les conversations enregistrées ?')) {
+            clearAllHistory()
+          }
+        }}
+      />
 
       <main className="chat-panel">
         <header className="chat-header">
-          <h2>Assistant</h2>
-          <div className="badges">
-            <span>{`auto -> ${resolvedMode}`}</span>
-            <span>{useRealPlanner ? 'real planner' : 'mock planner'}</span>
+          <div className="chat-header-top">
+            <h2>{activeConversation.title}</h2>
+            <p className="chat-subtitle">
+              Pipeline {resolvedMode} · affichage{' '}
+              {preferences.displayFormat === 'auto' ? 'automatique' : preferences.displayFormat}
+            </p>
           </div>
+          <PreferencesBar
+            preferences={preferences}
+            plannerReady={plannerReady}
+            onPreferenceChange={handlePreferenceChange}
+          />
         </header>
 
         <section className="messages" aria-live="polite">
-          {sortedMessages.map((msg) => (
-            <article key={msg.id} className={`bubble ${msg.role}`}>
-              {msg.role === 'assistant' ? (
-                <MessageContent content={msg.content} />
-              ) : (
-                <p className="text-segment">{msg.content}</p>
-              )}
-            </article>
-          ))}
-          {loading ? <article className="bubble assistant"><p>Thinking...</p></article> : null}
+          <div className="messages-inner">
+            {messages.map((msg, msgIndex) => {
+              const precedingUser =
+                msg.role === 'assistant'
+                  ? [...messages]
+                      .slice(0, msgIndex)
+                      .reverse()
+                      .find((m) => m.role === 'user')
+                  : null
+              const isWelcomeOnly =
+                msg.role === 'assistant' && msgIndex === 0 && messages.length === 1
+              const chartContainerId =
+                msg.role === 'assistant'
+                  ? getFirstChartContainerId(msg.id, msg.content)
+                  : null
+
+              return (
+              <article key={msg.id} className={`message-row ${msg.role}`}>
+                <div className={`avatar ${msg.role}`} aria-hidden>
+                  {msg.role === 'user' ? 'V' : 'AI'}
+                </div>
+                <div className={`bubble ${msg.role}`}>
+                  <header className="bubble-header">
+                    <span className="bubble-role">
+                      {msg.role === 'user' ? 'Vous' : 'Assistant'}
+                    </span>
+                    <time className="bubble-time" dateTime={msg.createdAt}>
+                      {formatMessageTime(msg.createdAt)}
+                    </time>
+                  </header>
+                  {msg.role === 'assistant' ? (
+                    <>
+                      <MessageContent
+                        content={msg.content}
+                        chartType={preferences.chartType}
+                        messageId={msg.id}
+                        displayMode={
+                          msg.displayFormat ||
+                          resolveDisplayMode(
+                            preferences.displayFormat,
+                            precedingUser ? detectFormatFromQuery(precedingUser.content) : null,
+                          )
+                        }
+                      />
+                      {!isWelcomeOnly ? (
+                        <AssistantMessageToolbar
+                          messageId={msg.id}
+                          content={msg.content}
+                          userQuery={precedingUser?.content || ''}
+                          conversationId={activeConversation.id}
+                          mode={msg.mode || resolvedMode}
+                          chartType={preferences.chartType}
+                          realPlanner={useRealPlanner}
+                          apiBaseUrl={API_BASE_URL}
+                          feedbackRating={msg.feedbackRating}
+                          chartContainerId={chartContainerId}
+                          onFeedback={setMessageFeedback}
+                        />
+                      ) : null}
+                    </>
+                  ) : (
+                    <p className="text-segment">{msg.content}</p>
+                  )}
+                </div>
+              </article>
+              )
+            })}
+            {loading ? (
+              <article className="message-row assistant">
+                <div className="avatar assistant" aria-hidden>
+                  AI
+                </div>
+                <div className="bubble assistant loading-bubble">
+                  <span className="typing">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                  Analyse en cours…
+                </div>
+              </article>
+            ) : null}
+            <div ref={messagesEndRef} />
+          </div>
         </section>
 
         <form className="composer" onSubmit={onSubmit}>
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask your business question..."
-            rows={2}
-          />
-          <button type="submit" disabled={!canSend}>
-            Send
-          </button>
+          <div className="composer-inner">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={onComposerKeyDown}
+              placeholder="Ex. Chiffre d'affaires par ville en tableau… (Entrée pour envoyer)"
+              rows={2}
+              disabled={loading}
+            />
+            <button type="submit" className="btn-primary" disabled={!canSend}>
+              Envoyer
+            </button>
+          </div>
+          {error ? <p className="error">{error}</p> : null}
         </form>
-        {error ? <p className="error">{error}</p> : null}
       </main>
     </div>
   )

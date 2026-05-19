@@ -24,7 +24,7 @@ CURRENT_DIR = os.path.dirname(__file__)
 SRC_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "..", "src"))
 if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
-from divalto_agent import run_agent, validate_payload
+from core.divalto_agent import run_agent, validate_payload
 
 print("=" * 60)
 print("DIVALTO AGENT — MOCK TEST SUITE")

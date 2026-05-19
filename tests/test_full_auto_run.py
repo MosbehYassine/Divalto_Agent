@@ -8,7 +8,7 @@ _SRC_DIR = os.path.abspath(os.path.join(_TESTS_DIR, "..", "src"))
 if _SRC_DIR not in sys.path:
     sys.path.insert(0, _SRC_DIR)
 
-from full_auto_run import (  # noqa: E402
+from analytics.full_auto_run import (  # noqa: E402
     _read_status,
     build_pipeline_commands,
     ensure_olap_readiness,

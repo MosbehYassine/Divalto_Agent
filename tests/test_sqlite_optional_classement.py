@@ -22,7 +22,7 @@ def test_sqlite_classement_returns_structure():
     os.environ["DIVALTO_USE_SQLITE_MOCK"] = "1"
     os.environ["DIVALTO_SQLITE_DB_PATH"] = str(MAGASIN_DB)
 
-    from sqlite_backend import execute_action  # noqa: E402
+    from core.sqlite_backend import execute_action  # noqa: E402
 
     payload = execute_action(
         "classement_ventes",

@@ -6,7 +6,7 @@ _SRC_DIR = os.path.abspath(os.path.join(_TESTS_DIR, "..", "src"))
 if _SRC_DIR not in sys.path:
     sys.path.insert(0, _SRC_DIR)
 
-from semantic_router import resolve_measure, select_best_action  # noqa: E402
+from routing.semantic_router import resolve_measure, select_best_action  # noqa: E402
 
 
 def test_select_best_action_prefers_facturation_terms():

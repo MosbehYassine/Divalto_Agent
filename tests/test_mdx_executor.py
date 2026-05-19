@@ -6,7 +6,7 @@ _SRC_DIR = _TESTS_DIR.parent / "src"
 if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
-from mdx_executor import execute_mdx_cellset, mdx_looks_read_only, should_execute_mdx_remote  # noqa: E402
+from analytics.mdx_executor import execute_mdx_cellset, mdx_looks_read_only, should_execute_mdx_remote  # noqa: E402
 
 
 def test_mdx_looks_read_only_accepts_select_and_with():

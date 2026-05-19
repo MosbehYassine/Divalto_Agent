@@ -6,7 +6,7 @@ _SRC_DIR = os.path.abspath(os.path.join(_TESTS_DIR, "..", "src"))
 if _SRC_DIR not in sys.path:
     sys.path.insert(0, _SRC_DIR)
 
-from prompt_templates import load_prompt_template  # noqa: E402
+from core.prompt_templates import load_prompt_template  # noqa: E402
 
 
 def test_load_phase3_prompt_template():

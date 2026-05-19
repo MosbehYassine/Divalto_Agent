@@ -12,7 +12,7 @@ if _SRC_DIR not in sys.path:
 
 import pytest  # noqa: E402
 
-from divalto_agent import validate_payload  # noqa: E402
+from core.divalto_agent import validate_payload  # noqa: E402
 
 
 @pytest.mark.parametrize(

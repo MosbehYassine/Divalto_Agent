@@ -1,0 +1,39 @@
+{
+  "customers_query": "SELECT id, nom, ville FROM clients",
+  "products_query": "SELECT id, designation FROM articles",
+  "sales_query": "SELECT f.date_facture, f.id_client, v.id_article, v.quantite, v.prix_vente_unitaire, f.id FROM ventes v JOIN factures f ON f.id = v.id_facture",
+  "customers_index_map": {
+    "customer_code": 0,
+    "customer_name": 1,
+    "city": 2
+  },
+  "customers_column_map": {
+    "customer_code": "id",
+    "customer_name": "nom",
+    "city": "ville"
+  },
+  "products_index_map": {
+    "product_code": 0,
+    "product_name": 1
+  },
+  "products_column_map": {
+    "product_code": "id",
+    "product_name": "designation"
+  },
+  "sales_index_map": {
+    "sale_date": 0,
+    "customer_code": 1,
+    "product_code": 2,
+    "quantity": 3,
+    "unit_price": 4,
+    "source_document_no": 5
+  },
+  "sales_column_map": {
+    "sale_date": "date_facture",
+    "customer_code": "id_client",
+    "product_code": "id_article",
+    "quantity": "quantite",
+    "unit_price": "prix_vente_unitaire",
+    "source_document_no": "id"
+  }
+}

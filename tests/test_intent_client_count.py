@@ -6,8 +6,8 @@ _SRC_DIR = os.path.abspath(os.path.join(_TESTS_DIR, "..", "src"))
 if _SRC_DIR not in sys.path:
     sys.path.insert(0, _SRC_DIR)
 
-from intent_contract import infer_intent  # noqa: E402
-from api_server import _infer_mode_from_query  # noqa: E402
+from core.intent_contract import infer_intent  # noqa: E402
+from app.server import _infer_mode_from_query  # noqa: E402
 
 
 def test_client_total_question_not_kpi_analysis():

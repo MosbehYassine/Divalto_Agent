@@ -11,7 +11,7 @@ from governance.context import build_execution_context  # noqa: E402
 from governance.execution_context import AgentExecutionContext  # noqa: E402
 from governance.kpi import summarize_audit_file  # noqa: E402
 from governance.pipeline import finalize_agent_audit  # noqa: E402
-from phase3_orchestrator import execute_plan  # noqa: E402
+from phase3.orchestrator import execute_plan  # noqa: E402
 
 
 def test_plan_denies_blocked_action(tmp_path):

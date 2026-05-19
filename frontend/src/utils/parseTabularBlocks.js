@@ -1,5 +1,5 @@
 /**
- * Extract tabular blocks from assistant answer text (markdown, pipe, ASCII series).
+ * Extract tabular blocks from assistant answer text (markdown, pipe, ASCII series, numbered lists).
  */
 
 const MARKDOWN_ROW = /^\s*\|(.+)\|\s*$/
@@ -8,6 +8,8 @@ const PIPE_ROW = /^.+\u2502.+$/
 const PIPE_SEP = /^[-+\u2500\u2502\s]+$/
 const ASCII_SERIES =
   /^\s*(.+?)\s*\u2502\s*[#\u00b7.\s]+\s+(-?[\d.,]+(?:e[-+]?\d+)?)\s*$/i
+const NUMBERED_METRIC =
+  /^\s*\d+\.\s+(.+?)\s*:\s*([\d.,\s]+)\s*(€|unité\(s\)|unités?)?\s*$/i
 
 export function parseNumeric(value) {
   if (value == null) return null
@@ -144,8 +146,28 @@ function parseAsciiSeriesBlock(lines, start) {
   }
 }
 
+/** Convert "1. Paris : 1234.56 €" blocks into a table (legacy answers). */
+function parseNumberedMetricBlock(lines, start) {
+  if (!NUMBERED_METRIC.test(lines[start])) return null
+  const rows = []
+  let i = start
+  while (i < lines.length && NUMBERED_METRIC.test(lines[i])) {
+    const m = lines[i].match(NUMBERED_METRIC)
+    if (!m) break
+    rows.push([m[1].trim(), m[2].trim()])
+    i += 1
+  }
+  if (rows.length < 2) return null
+  return {
+    kind: 'numbered',
+    headers: ['Libellé', 'Valeur'],
+    rows,
+    end: i,
+  }
+}
+
 /**
- * @returns {{ blocks: Array<{start: number, end: number, headers: string[], rows: string[][]}>, segments: Array<{type: 'text'|'table', text?: string, blockIndex?: number}> }}
+ * @returns {{ blocks: Array<{headers: string[], rows: string[][]}>, segments: Array<{type: 'text'|'table', text?: string, blockIndex?: number}> }}
  */
 export function parseAnswerContent(content) {
   if (!content || typeof content !== 'string') {
@@ -170,8 +192,9 @@ export function parseAnswerContent(content) {
     const md = parseMarkdownBlock(lines, lineIdx)
     const pipe = md ? null : parsePipeBlock(lines, lineIdx)
     const ascii = md || pipe ? null : parseAsciiSeriesBlock(lines, lineIdx)
+    const numbered = md || pipe || ascii ? null : parseNumberedMetricBlock(lines, lineIdx)
 
-    const parsed = md || pipe || ascii
+    const parsed = md || pipe || ascii || numbered
     if (!parsed) {
       lineIdx += 1
       continue

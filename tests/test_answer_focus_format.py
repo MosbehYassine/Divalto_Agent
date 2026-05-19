@@ -8,9 +8,9 @@ SRC_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "..", "src"))
 if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
-from divalto_agent import format_response  # noqa: E402
-from phase4_prefunctions import extract_lookup_hint  # noqa: E402
-from phase3_planner import apply_client_count_plan_override  # noqa: E402
+from core.divalto_agent import format_response  # noqa: E402
+from phase4.prefunctions import extract_lookup_hint  # noqa: E402
+from phase3.planner import apply_client_count_plan_override  # noqa: E402
 
 
 def test_client_count_plan_overrides_wrong_stock_plan():

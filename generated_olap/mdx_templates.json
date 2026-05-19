@@ -1,0 +1,44 @@
+{
+  "templates": [
+    {
+      "name": "articles_prix_unitaire_total",
+      "query": "SELECT {[Measures].[prix_unitaire]} ON COLUMNS FROM [AutoCube]"
+    },
+    {
+      "name": "articles_prix_unitaire_by_designation",
+      "query": "SELECT {[Measures].[prix_unitaire]} ON COLUMNS, NON EMPTY [articles].[designation].MEMBERS ON ROWS FROM [AutoCube]"
+    },
+    {
+      "name": "stocks_id_article_total",
+      "query": "SELECT {[Measures].[id_article]} ON COLUMNS FROM [AutoCube]"
+    },
+    {
+      "name": "stocks_quantite_total",
+      "query": "SELECT {[Measures].[quantite]} ON COLUMNS FROM [AutoCube]"
+    },
+    {
+      "name": "factures_id_client_total",
+      "query": "SELECT {[Measures].[id_client]} ON COLUMNS FROM [AutoCube]"
+    },
+    {
+      "name": "factures_id_client_by_date_facture",
+      "query": "SELECT {[Measures].[id_client]} ON COLUMNS, NON EMPTY [factures].[date_facture].MEMBERS ON ROWS FROM [AutoCube]"
+    },
+    {
+      "name": "ventes_id_facture_total",
+      "query": "SELECT {[Measures].[id_facture]} ON COLUMNS FROM [AutoCube]"
+    },
+    {
+      "name": "ventes_id_article_total",
+      "query": "SELECT {[Measures].[id_article]} ON COLUMNS FROM [AutoCube]"
+    },
+    {
+      "name": "ventes_quantite_total",
+      "query": "SELECT {[Measures].[quantite]} ON COLUMNS FROM [AutoCube]"
+    },
+    {
+      "name": "ventes_prix_vente_unitaire_total",
+      "query": "SELECT {[Measures].[prix_vente_unitaire]} ON COLUMNS FROM [AutoCube]"
+    }
+  ]
+}

@@ -8,7 +8,7 @@ if _SRC_DIR not in sys.path:
 
 import pytest  # noqa: E402
 
-from analytic_compiler import compile_mdx, compile_sqlite, validate_plan  # noqa: E402
+from analytics.compiler import compile_mdx, compile_sqlite, validate_plan  # noqa: E402
 
 
 @pytest.fixture()

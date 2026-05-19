@@ -17,14 +17,14 @@ SRC_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "..", "src"))
 if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
-from phase4_agent import run_phase4  # noqa: E402
-from phase4_query_builder import (  # noqa: E402
+from phase4.agent import run_phase4  # noqa: E402
+from phase4.query_builder import (  # noqa: E402
     build_training_ready_artifacts,
     build_ws_payload,
     build_ws_payload_guarded,
     build_ws_payload_with_diagnostics,
 )
-from phase4_tools import TOOLS_REGISTRY, get_tool_by_action  # noqa: E402
+from phase4.tools import TOOLS_REGISTRY, get_tool_by_action  # noqa: E402
 
 
 def test_tools_registry_contains_phase4_domains() -> None:

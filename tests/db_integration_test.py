@@ -22,9 +22,9 @@ DB_PATH = (ROOT_DIR.parent / "mock database" / "magasin_mock.db").resolve()
 os.environ["DIVALTO_USE_SQLITE_MOCK"] = "1"
 os.environ["DIVALTO_SQLITE_DB_PATH"] = str(DB_PATH)
 
-from divalto_agent import run_agent, run_agent_structured  # noqa: E402
-from phase3_agent import run_phase3  # noqa: E402
-from phase4_agent import run_phase4  # noqa: E402
+from core.divalto_agent import run_agent, run_agent_structured  # noqa: E402
+from phase3.agent import run_phase3  # noqa: E402
+from phase4.agent import run_phase4  # noqa: E402
 
 
 def _assert(name: str, condition: bool, details: str) -> None:

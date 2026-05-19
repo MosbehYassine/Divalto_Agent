@@ -10,8 +10,8 @@ _SRC_DIR = os.path.abspath(os.path.join(_TESTS_DIR, "..", "src"))
 if _SRC_DIR not in sys.path:
     sys.path.insert(0, _SRC_DIR)
 
-from phase5_agent import run_phase5_structured  # noqa: E402
-from phase5_analytics import synthesize_answer  # noqa: E402
+from phase5.agent import run_phase5_structured  # noqa: E402
+from phase5.analytics import synthesize_answer  # noqa: E402
 
 
 def test_phase5_classement_plus_total_fr():

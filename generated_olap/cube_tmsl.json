@@ -1,0 +1,157 @@
+{
+  "createOrReplace": {
+    "object": {
+      "database": "AutoCubeModel"
+    },
+    "database": {
+      "name": "AutoCubeModel",
+      "compatibilityLevel": 1500,
+      "model": {
+        "tables": [
+          {
+            "name": "clients",
+            "columns": [
+              {
+                "name": "id",
+                "dataType": "string"
+              },
+              {
+                "name": "nom",
+                "dataType": "string"
+              },
+              {
+                "name": "email",
+                "dataType": "string"
+              },
+              {
+                "name": "ville",
+                "dataType": "string"
+              }
+            ],
+            "measures": []
+          },
+          {
+            "name": "articles",
+            "columns": [
+              {
+                "name": "id",
+                "dataType": "string"
+              },
+              {
+                "name": "designation",
+                "dataType": "string"
+              },
+              {
+                "name": "prix_unitaire",
+                "dataType": "double"
+              }
+            ],
+            "measures": [
+              {
+                "name": "prix_unitaire_avg",
+                "expression": "AVG([prix_unitaire])",
+                "formatString": "#,0.00"
+              }
+            ]
+          },
+          {
+            "name": "stocks",
+            "columns": [
+              {
+                "name": "id_article",
+                "dataType": "double"
+              },
+              {
+                "name": "quantite",
+                "dataType": "double"
+              }
+            ],
+            "measures": [
+              {
+                "name": "id_article_sum",
+                "expression": "SUM([id_article])",
+                "formatString": "#,0.00"
+              },
+              {
+                "name": "quantite_sum",
+                "expression": "SUM([quantite])",
+                "formatString": "#,0.00"
+              }
+            ]
+          },
+          {
+            "name": "factures",
+            "columns": [
+              {
+                "name": "id",
+                "dataType": "string"
+              },
+              {
+                "name": "date_facture",
+                "dataType": "string"
+              },
+              {
+                "name": "id_client",
+                "dataType": "double"
+              }
+            ],
+            "measures": [
+              {
+                "name": "id_client_sum",
+                "expression": "SUM([id_client])",
+                "formatString": "#,0.00"
+              }
+            ]
+          },
+          {
+            "name": "ventes",
+            "columns": [
+              {
+                "name": "id",
+                "dataType": "string"
+              },
+              {
+                "name": "id_facture",
+                "dataType": "double"
+              },
+              {
+                "name": "id_article",
+                "dataType": "double"
+              },
+              {
+                "name": "quantite",
+                "dataType": "double"
+              },
+              {
+                "name": "prix_vente_unitaire",
+                "dataType": "double"
+              }
+            ],
+            "measures": [
+              {
+                "name": "id_facture_sum",
+                "expression": "SUM([id_facture])",
+                "formatString": "#,0.00"
+              },
+              {
+                "name": "id_article_sum",
+                "expression": "SUM([id_article])",
+                "formatString": "#,0.00"
+              },
+              {
+                "name": "quantite_sum",
+                "expression": "SUM([quantite])",
+                "formatString": "#,0.00"
+              },
+              {
+                "name": "prix_vente_unitaire_avg",
+                "expression": "AVG([prix_vente_unitaire])",
+                "formatString": "#,0.00"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

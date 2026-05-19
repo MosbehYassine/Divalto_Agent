@@ -1,0 +1,39 @@
+{
+  "customers_query": "SELECT customer_id, customer_name, city FROM dbo.customers",
+  "products_query": "SELECT product_id, product_name FROM dbo.products",
+  "sales_query": "SELECT CAST(invoice_date AS date), customer_id, product_id, quantity, unit_price, invoice_no FROM dbo.sales_lines",
+  "customers_index_map": {
+    "customer_code": 0,
+    "customer_name": 1,
+    "city": 2
+  },
+  "customers_column_map": {
+    "customer_code": "customer_id",
+    "customer_name": "customer_name",
+    "city": "city"
+  },
+  "products_index_map": {
+    "product_code": 0,
+    "product_name": 1
+  },
+  "products_column_map": {
+    "product_code": "product_id",
+    "product_name": "product_name"
+  },
+  "sales_index_map": {
+    "sale_date": 0,
+    "customer_code": 1,
+    "product_code": 2,
+    "quantity": 3,
+    "unit_price": 4,
+    "source_document_no": 5
+  },
+  "sales_column_map": {
+    "sale_date": "invoice_date",
+    "customer_code": "customer_id",
+    "product_code": "product_id",
+    "quantity": "quantity",
+    "unit_price": "unit_price",
+    "source_document_no": "invoice_no"
+  }
+}

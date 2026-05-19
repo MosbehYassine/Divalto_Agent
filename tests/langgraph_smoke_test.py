@@ -14,7 +14,7 @@ SRC_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "..", "src"))
 if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
-from langgraph_agent import run_phase3_langgraph  # noqa: E402
+from agents.langgraph_agent import run_phase3_langgraph  # noqa: E402
 
 
 def main() -> int:

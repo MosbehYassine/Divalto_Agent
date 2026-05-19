@@ -10,12 +10,12 @@ import logging
 import sys
 
 from governance.models import ExecutionApproval
-from full_auto_run import (
+from analytics.full_auto_run import (
     _resolve_default_paths,
     ensure_olap_readiness,
     ensure_olap_readiness_async,
 )
-from settings import (
+from core.settings import (
     AUTO_OLAP_ASYNC_REFRESH,
     AUTO_OLAP_FORCE_REFRESH,
     AUTO_OLAP_PROCESS_SSAS,
@@ -23,9 +23,9 @@ from settings import (
     AUTO_OLAP_SSAS_COMMAND,
 )
 
-from phase3_agent import run_phase3
-from phase4_agent import run_phase4
-from phase5_agent import run_phase5
+from phase3.agent import run_phase3
+from phase4.agent import run_phase4
+from phase5.agent import run_phase5
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -134,7 +134,7 @@ def main() -> int:
     corr_id = args.correlation_id.strip() or None
 
     if args.mode == "langgraph":
-        from langgraph_agent import run_phase3_langgraph
+        from agents.langgraph_agent import run_phase3_langgraph
 
         answer = run_phase3_langgraph(
             args.query,

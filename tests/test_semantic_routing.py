@@ -7,7 +7,7 @@ _SRC_DIR = _TESTS_DIR.parent / "src"
 if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
-from semantic_routing import classic_semantic_analytics_eligible  # noqa: E402
+from routing.semantic_routing import classic_semantic_analytics_eligible  # noqa: E402
 
 
 def test_classic_semantic_eligible_for_aggregate_question(monkeypatch):

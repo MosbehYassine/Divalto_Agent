@@ -63,7 +63,7 @@ def test_run_semantic_data_analytics_executes_sqlite(monkeypatch, tiny_semantic_
 
     with patch("analytic_orchestrator.load_or_build_semantic_bundle", fake_bundle):
         with patch("analytic_orchestrator.call_ollama_json_object", fake_ollama):
-            from analytic_orchestrator import run_semantic_data_analytics
+            from analytics.orchestrator import run_semantic_data_analytics
 
             out = run_semantic_data_analytics("total sales by region")
 
@@ -106,7 +106,7 @@ def test_run_semantic_data_analytics_mdx_remote_section(monkeypatch, tiny_semant
     with patch("analytic_orchestrator.load_or_build_semantic_bundle", fake_bundle):
         with patch("analytic_orchestrator.call_ollama_json_object", fake_ollama):
             with patch("analytic_orchestrator.execute_mdx_cellset", fake_mdx_execute):
-                from analytic_orchestrator import run_semantic_data_analytics
+                from analytics.orchestrator import run_semantic_data_analytics
 
                 out = run_semantic_data_analytics("grand total sales")
 

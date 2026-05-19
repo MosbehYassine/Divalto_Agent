@@ -11,5 +11,8 @@ dist/
 build/
 node_modules/
 frontend/dist/
+# Documentation (not versioned)
 docs/
-generated_olap/
+src/README.md
+# Logs and local runtime
+*.log

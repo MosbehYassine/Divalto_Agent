@@ -8,7 +8,7 @@ _SRC_DIR = os.path.abspath(os.path.join(_TESTS_DIR, "..", "src"))
 if _SRC_DIR not in sys.path:
     sys.path.insert(0, _SRC_DIR)
 
-from auto_olap_pipeline import (  # noqa: E402
+from analytics.auto_olap_pipeline import (  # noqa: E402
     generate_mdx_templates,
     infer_semantic_model,
     run_auto_modeling,
